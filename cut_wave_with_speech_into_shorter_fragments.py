@@ -4,6 +4,8 @@ import numpy as np
 from vad_sohn import vad
 from fbe_vad_sohn import fbe, load_wav
 from noise_tracking_hendriks import NoiseTracking
+from typing import List
+import matplotlib.pyplot as plt
 
 class CutIntoShorterFragments:
 
@@ -12,13 +14,13 @@ class CutIntoShorterFragments:
         self.sampling_rate = sampling_rate
         self.min_fragment_length = min_fragment_length
         self.max_fragment_length = max_fragment_length
-        self.min_silence_length_in_frames
+        self.min_silence_length_in_frames = min_silence_length_in_frames
         self.frame = frame
         self.v = vad(frame=self.frame)
         self.nt = NoiseTracking(frame=self.frame)
         self.noisy_fbe = fbe(frame=self.frame)
 
-    def get_fragments(input_samples : np.ndarray):
+    def get_fragments(self, input_samples : np.ndarray) -> List[np.ndarray]:
 
         start = 0
 
@@ -42,17 +44,33 @@ class CutIntoShorterFragments:
 
             self.nt.noisePowRunning(noisy_psd)
 
-            noise_psd = self.nd.get_noise_psd()
+            noise_psd = self.nt.get_noise_psd()
 
-            if self.v.vad(noise_psd) < 0.5:
+            sprb = self.v.vad(noisy_psd, noise_psd)
+
+            plt.plot(fs)
+
+            plt.show()
+
+            print(f"current frame speech presence probability {sprb}")
+
+            print()
+
+            input('press enter ...')
+
+            if  sprb < 0.5:
 
                 silent_frame = True
-
-                fragment_length += self.frame/self.sampling_rate
 
             else:
 
                 silent_frame = False
+
+                fragment_length += self.frame/self.sampling_rate
+
+                print(f"current fragment length {fragment_length}")
+
+                input('press enter non silent frame found ...')
 
             if not silence_flag and silent_frame:
 
@@ -78,7 +96,11 @@ class CutIntoShorterFragments:
 
                     fragment = input_samples[prev_cut_point:cut_point]
 
-                    print(f"created fragment length {len(fragment)}")
+                    print(f"created fragment length {len(fragment)/self.sampling_rate}")
+
+                    input("press enter ..")
+
+
 
                     output_list_of_fragments.append(fragment)
 
@@ -86,10 +108,20 @@ class CutIntoShorterFragments:
 
                     fragment_length = 0
 
+            start += self.frame
+
+            #  print(f"start = {start}")
+
         return output_list_of_fragments
 
 if __name__ == "__main__":
 
-   speech, sr, target_sampling_rate = load_wav('German_Wikipedia_Otto_Hahn_audio_16kHz.wav')
+    speech, sr, target_sampling_rate = load_wav('German_Wikipedia_Otto_Hahn_audio_16kHz.wav')
 
-   print(f"sampling rate {sr}")
+    print(f"sampling rate {sr}")
+
+    c = CutIntoShorterFragments(frame=512)
+
+    c.get_fragments(speech)
+
+
