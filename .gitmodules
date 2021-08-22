@@ -1,0 +1,3 @@
+[submodule "vad-python"]
+	path = vad-python
+	url = https://github.com/mkurop/vad-python.git
