@@ -145,6 +145,15 @@ class CutIntoShorterFragments:
         return output_list_of_fragments
 
     def save_fragments(self, folder : str, name_prefix : str):
+        """Saves fragments into files in the folder. The names for the fragments are created according to convention: name_prefix + <consecutive number of the fragment with appropriate number of leading zeros>
+
+        :param folder:
+        :type folder: str
+        :param name_prefix:
+        :type name_prefix: str
+        """
+
+
 
         if not self.fragments_ready:
 
