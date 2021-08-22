@@ -19,6 +19,7 @@ class CutIntoShorterFragments:
         self.v = vad(frame=self.frame)
         self.nt = NoiseTracking(frame=self.frame)
         self.noisy_fbe = fbe(frame=self.frame)
+        self.start = True
 
     def get_fragments(self, input_samples : np.ndarray) -> List[np.ndarray]:
 
@@ -48,15 +49,14 @@ class CutIntoShorterFragments:
 
             sprb = self.v.vad(noisy_psd, noise_psd)
 
-            plt.plot(fs)
+            #  print(f"current frame speech presence probability {sprb}")
 
-            plt.show()
+            #  plt.plot(fs)
+#
+            #  plt.show()
 
-            print(f"current frame speech presence probability {sprb}")
 
-            print()
-
-            input('press enter ...')
+            #  input('press enter ...')
 
             if  sprb < 0.5:
 
@@ -68,9 +68,9 @@ class CutIntoShorterFragments:
 
                 fragment_length += self.frame/self.sampling_rate
 
-                print(f"current fragment length {fragment_length}")
+                #  print(f"current fragment length {fragment_length}")
 
-                input('press enter non silent frame found ...')
+                #  input('press enter non silent frame found ...')
 
             if not silence_flag and silent_frame:
 
@@ -80,7 +80,7 @@ class CutIntoShorterFragments:
 
             if silence_flag and not silent_frame:
 
-                silen_flag = False
+                silence_flag = False
 
                 silence_end = start
 
@@ -90,23 +90,28 @@ class CutIntoShorterFragments:
 
                 if (last_silence[1] - last_silence[0])//self.frame >= self.min_silence_length_in_frames:
 
-                    cut_point = (last_silence[1]+last_silence[0])//self.frame
+                    cut_point = np.uint32(np.round(0.5*(last_silence[1]+last_silence[0])))
 
-                if fragment_length >= self.min_fragment_length:
+                    if self.start:
 
-                    fragment = input_samples[prev_cut_point:cut_point]
+                        prev_cut_point = cut_point
 
-                    print(f"created fragment length {len(fragment)/self.sampling_rate}")
+                        self.start = False
 
-                    input("press enter ..")
+                    if fragment_length >= self.min_fragment_length:
 
+                        fragment = input_samples[prev_cut_point:cut_point]
 
+                        print(f"created fragment length {len(fragment)/self.sampling_rate}")
 
-                    output_list_of_fragments.append(fragment)
+                        #  plt.plot(fragment)
+                        #  plt.show()
 
-                    prev_cut_point = cut_point
+                        output_list_of_fragments.append(fragment)
 
-                    fragment_length = 0
+                        prev_cut_point = cut_point
+
+                        fragment_length = 0
 
             start += self.frame
 
@@ -120,8 +125,10 @@ if __name__ == "__main__":
 
     print(f"sampling rate {sr}")
 
-    c = CutIntoShorterFragments(frame=512)
+    c = CutIntoShorterFragments(frame=512,min_silence_length_in_frames=25)
 
-    c.get_fragments(speech)
+    fragments = c.get_fragments(speech)
+
+    np.save('fragments', fragments)
 
 
