@@ -2,26 +2,47 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from vad_sohn import vad
-from fbe_vad_sohn import fbe, load_wav
+from fbe_vad_sohn import fbe, load_wav, save_wav
 from noise_tracking_hendriks import NoiseTracking
 from typing import List
 import matplotlib.pyplot as plt
+import sys
+import os
 
 class CutIntoShorterFragments:
 
-    def __init__(self, sampling_rate : int = 16000, min_fragment_length : int = 7, max_fragment_length : int = 20, min_silence_length_in_frames : int = 3, frame : int = 320):
+    """Construtor creating the cutter class object
+
+    :param sampling_rate: sampling rate of the file to process
+    :type sampling_rate: int
+    :param min_fragment_length: minimal fragment length in seconds
+    :type min_fragment_length: int
+    :param min_silence_length_in_frames: minimal silence length in frames to allow cutting
+    :type min_silence_length_in_frames: int
+    :param frame: frame length in samples
+    :type frame: int
+    """
+
+    def __init__(self, sampling_rate : int = 16000, min_fragment_length : int = 7,  min_silence_length_in_frames : int = 3, frame : int = 320):
 
         self.sampling_rate = sampling_rate
         self.min_fragment_length = min_fragment_length
-        self.max_fragment_length = max_fragment_length
         self.min_silence_length_in_frames = min_silence_length_in_frames
         self.frame = frame
         self.v = vad(frame=self.frame)
         self.nt = NoiseTracking(frame=self.frame)
         self.noisy_fbe = fbe(frame=self.frame)
         self.start = True
+        self.fragments_ready = False
 
     def get_fragments(self, input_samples : np.ndarray) -> List[np.ndarray]:
+        """Actual method for cutting out short fragments from a long recording
+
+        :param input_samples: samples of the input recording, the samples have to be at sampling_rate, no check provided
+        :type input_samples: np.ndarray
+        :returns: a list of np.ndarrays containing cutted off fragments
+        :rtype: List[np.ndarray]
+        """
 
         start = 0
 
@@ -117,7 +138,40 @@ class CutIntoShorterFragments:
 
             #  print(f"start = {start}")
 
+        self.fragments = output_list_of_fragments
+
+        self.fragments_ready = True
+
         return output_list_of_fragments
+
+    def save_fragments(self, folder : str, name_prefix : str):
+
+        if not self.fragments_ready:
+
+            print(f"WARNING run first the get_fragments method to create fragments")
+
+            sys.exit(1)
+
+
+        num_of_fragments = len(self.fragments) 
+
+        num_zeros = len(list(str(num_of_fragments)))
+
+        fill_zeros = ''.join(['0']*num_zeros) 
+
+        for i in range(num_of_fragments):
+
+            fragments_num = str(i)
+
+            zeros_fragments_num = list(fill_zeros)
+
+            zeros_fragments_num[-len(fragments_num):] = list(fragments_num)
+
+            zeros_fragments_num_str = ''.join(zeros_fragments_num)
+
+            print(os.path.join(folder, name_prefix+zeros_fragments_num_str +'.wav'))
+
+            save_wav(self.fragments[i], 16000, os.path.join(folder, name_prefix+zeros_fragments_num_str +'.wav'))
 
 if __name__ == "__main__":
 
@@ -125,9 +179,11 @@ if __name__ == "__main__":
 
     print(f"sampling rate {sr}")
 
-    c = CutIntoShorterFragments(frame=512,min_silence_length_in_frames=25)
+    c = CutIntoShorterFragments(frame=320,min_fragment_length=2, min_silence_length_in_frames=15)
 
     fragments = c.get_fragments(speech)
+
+    c.save_fragments('./output/','German_Wikipedia_Otto_Hahn_audio_16kHz_num')
 
     np.save('fragments', fragments)
 
