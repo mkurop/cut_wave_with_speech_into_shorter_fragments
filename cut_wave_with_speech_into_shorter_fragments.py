@@ -194,6 +194,5 @@ if __name__ == "__main__":
 
     c.save_fragments('./output/','German_Wikipedia_Otto_Hahn_audio_16kHz_num')
 
-    np.save('fragments', fragments)
 
 
